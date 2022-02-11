@@ -1,0 +1,6 @@
+include LICENSE.txt
+include README.rst
+include setup.cfg
+include requirements.txt
+recursive-include pyvar/ *.csv.gz
+recursive-include output/ *.png
