@@ -2,7 +2,7 @@ To install, just use pip :
 
 .. code:: python
 
-   pip install pyvar
+   pip install varpy
 
 Required Dependencies are listed below , such :
 
@@ -29,10 +29,10 @@ To begin, let’s extract default data:
 
 .. code:: python
 
-   import pyvar
-   from pyvar import EVT_VaR,Student_VaR,Normal_VaR 
-   from pyvar.Backtester.bktst import Backtest
-   from pyvar.Backtester.time_Significance import Testing
+   import varpy
+   from varpy import EVT_VaR,Student_VaR,Normal_VaR 
+   from varpy.Backtester.bktst import Backtest
+   from varpy.Backtester.time_Significance import Testing
    import matplotlib.pyplot as plt 
 
    data = d1()* 100
