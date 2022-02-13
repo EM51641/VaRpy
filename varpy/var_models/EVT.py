@@ -32,6 +32,6 @@ def Dist_parameters(excess_returns, excess_innovations ):
 def Var_CVaR_extractor(mean_forecast,var_forecast,theta,excess_innovations,innovation_params,total_length,sample_length,last_innovation_term):
     uncond_Var = last_innovation_term + (innovation_params[2]/innovation_params[0]) * ( ( total_length * theta / sample_length) ** (- innovation_params[0]) - 1 )
     VaR = -( mean_forecast + np.sqrt(var_forecast) * uncond_Var )
-    CVaR = -( mean_forecast + uncond_Var * np.sqrt(var_forecast) * (  1 / (1 - innovation_params[0]) + \
+    CVaR = - ( mean_forecast + uncond_Var * np.sqrt(var_forecast) * (  1 / (1 - innovation_params[0]) + \
             (innovation_params[2] - innovation_params[0] * last_innovation_term ) / ((1-innovation_params[0]) * uncond_Var) ) )
     return VaR , CVaR

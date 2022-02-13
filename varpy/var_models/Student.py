@@ -32,7 +32,9 @@ def Dist_parameters(innovations):
 def Var_CVaR_extractor(mean_forecast,var_forecast,alpha,theta):
         unconditional_VaR = np.sqrt((alpha-2)/alpha)*scipy.stats.t.ppf(1-theta,alpha)
         VaR    = - (mean_forecast + np.sqrt(var_forecast) * unconditional_VaR ) 
-        CVaR   = - (scipy.stats.t.pdf(scipy.stats.t.ppf(1-theta,alpha),alpha)/theta) * ( alpha+scipy.stats.t.ppf(1-theta,alpha)**2)/(alpha-1) \
-                * np.sqrt(var_forecast) - mean_forecast
+        #CVaR   = - (scipy.stats.t.pdf(scipy.stats.t.ppf(1-theta,alpha),alpha)/theta) * ( alpha+scipy.stats.t.ppf(1-theta,alpha)**2)/(alpha-1) \
+        #        * np.sqrt(var_forecast) - mean_forecast
+        CVaR   = - ((scipy.stats.t.pdf(scipy.stats.t.ppf(1-theta,alpha),alpha)/theta) * ( alpha+scipy.stats.t.ppf(1-theta,alpha)**2)/(alpha-1) \
+                * np.sqrt(var_forecast) + mean_forecast)
         return VaR , CVaR
 

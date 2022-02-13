@@ -32,6 +32,7 @@ def Dist_parameters(excess_innovations):
 def Var_CVaR_extractor(mean_forecast,var_forecast,scale,mu,theta,):
         unconditional_VaR = scipy.stats.norm.ppf(1-theta) * scale - mu
         VaR    = - ( mean_forecast + np.sqrt(var_forecast) * unconditional_VaR ) 
-        CVaR   = -( np.sqrt(var_forecast) * (scipy.stats.norm.pdf(scipy.stats.norm.ppf(1-theta))/(theta)) - mean_forecast )
+        #CVaR   = -( np.sqrt(var_forecast) * (scipy.stats.norm.pdf(scipy.stats.norm.ppf(1-theta))/(theta)) - mean_forecast )
+        CVaR   = -( mean_forecast + np.sqrt(var_forecast) * (scipy.stats.norm.pdf(scipy.stats.norm.ppf(1-theta))/(theta)))
         return VaR , CVaR
 
