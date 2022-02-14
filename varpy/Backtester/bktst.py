@@ -3,7 +3,7 @@ from varpy import EVT_VaR , Normal_VaR , Student_VaR
 
 
 
-def Backtest(return_mtx :np.ndarray ,maximum_data_point : np.int64 ,step : np.int64, theta : np.float64 ,model = 'gaussian') : 
+def Backtest(return_mtx :np.ndarray ,maximum_data_point : np.int64 ,step : np.int64, theta : np.float64 ,model = 'Gaussian') : 
     """
     Backtest the VaR model and test its time significance
 
