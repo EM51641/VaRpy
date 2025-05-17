@@ -22,7 +22,7 @@ jobs:
 
         - name: Run tests
           run: |
-            uv run pytest --cov=pyinsurance --cov-report=xml
+            uv run pytest --cov=varpy --cov-report=xml
 
   lint:
     runs-on: ubuntu-latest
