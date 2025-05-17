@@ -1,6 +1,4 @@
-include LICENSE.txt
-include README.rst
-include setup.cfg
+include LICENCE
+include README.md
 include requirements.txt
-recursive-include pyvar/ *.csv.gz
-recursive-include output/ *.png
+recursive-include varpy/ *.csv.gz
