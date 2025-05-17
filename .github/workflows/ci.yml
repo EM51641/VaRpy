@@ -34,15 +34,15 @@ jobs:
 
         - name: Run flake8
           run: |
-            uv run flake8 pyinsurance/ test/
+            uv run flake8 varpy/
 
         - name: Run black
           run: |
-            uv run black --check pyinsurance/ test/
+            uv run black --check varpy/
 
         - name: Run isort
           run: |
-            uv run isort --check-only pyinsurance/ test/
+            uv run isort --check-only varpy/
 
   static-analysis:
     runs-on: ubuntu-latest
@@ -54,4 +54,4 @@ jobs:
 
         - name: Run static analysis
           run: |
-            uv run mypy pyinsurance
+            uv run mypy varpy
