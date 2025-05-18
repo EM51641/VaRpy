@@ -7,9 +7,10 @@ name = "varpy"
 version = "2.0.1"
 description = "Value at Risk tools"
 readme = "README.md"
-repository = "https://github.com/EM51641/varpy"
 keywords = ["value at risk", "risk management", "financial risk", "risk metrics"]
-authors = ["Elyes Mahjoubi <elyesmahjoubi@gmail.com>"]
+authors = [
+    {name = "Elyes Mahjoubi", email = "elyesmahjoubi@gmail.com"}
+]
 requires-python = ">=3.10"
 dependencies = [
     "pandas-stubs>=2.2.3.250308",
@@ -24,6 +25,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 
+[project.urls]
+repository = "https://github.com/EM51641/varpy"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
@@ -33,11 +37,6 @@ dev = [
     "isort>=5.0.0",
     "flake8>=5.0.0"
 ]
-
-
-[tool.setuptools]
-package-dir = {"varpy" = "varpy"}
-
 
 [tool.setuptools.packages.find]
 where = ["."]
