@@ -18,6 +18,10 @@ class EVT(BaseVar):
         Returns:
             None
         """
+
+        if ret.size < 1:
+            raise ValueError("Not enough data to compute VaR and CVaR")
+
         # Get GARCH forecasts
         mean, var, cond_vol = self._get_garch_forecasts(ret)
 
@@ -40,7 +44,7 @@ class EVT(BaseVar):
 
     def _get_garch_forecasts(
         self, ret: NDArray[np.float64]
-    ) -> tuple[float, float, float]:
+    ) -> tuple[float, float, NDArray[np.float64]]:
         """
         Get GARCH forecasts for mean, variance, and conditional volatility.
 
@@ -51,7 +55,7 @@ class EVT(BaseVar):
         return garch_forecast(reg, self.horizon)
 
     def _get_excess_innovations(
-        self, ret: NDArray[np.float64], mean: float, cond_vol: float
+        self, ret: NDArray[np.float64], mean: float, cond_vol: NDArray[np.float64]
     ) -> tuple[NDArray[np.float64], float]:
         """
         Extract excess innovations using the innovation processor.

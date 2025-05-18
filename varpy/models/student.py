@@ -37,7 +37,7 @@ class Student(BaseVar):
 
     def _get_garch_forecasts(
         self, ret: NDArray[np.float64]
-    ) -> tuple[float, float, float]:
+    ) -> tuple[float, float, NDArray[np.float64]]:
         """
         Get GARCH forecasts for mean, variance, and conditional volatility.
 
@@ -51,7 +51,7 @@ class Student(BaseVar):
         return garch_forecast(reg, self.horizon)
 
     def _get_excess_innovations(
-        self, ret: NDArray[np.float64], mean: float, cond_vol: float
+        self, ret: NDArray[np.float64], mean: float, cond_vol: NDArray[np.float64]
     ) -> NDArray[np.float64]:
         """
         Extract excess innovations using the innovation processor.

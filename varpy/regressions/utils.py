@@ -14,7 +14,7 @@ class InnovationProcessor:
     Attributes:
         returns (NDArray[np.float64]): The input return series
         mean (float): The mean of the return series
-        volatility (float): The volatility of the return series
+        volatility (NDArray[np.float64]): The volatility of the return series
         retention_threshold (float): The proportion of data to retain (0 to 1)
         retention_index (int): The number of observations to retain
     """
@@ -23,7 +23,7 @@ class InnovationProcessor:
         self,
         returns: NDArray[np.float64],
         mean: float,
-        volatility: float,
+        volatility: NDArray[np.float64],
         retention_threshold: float,
     ) -> None:
         """

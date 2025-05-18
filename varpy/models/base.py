@@ -14,6 +14,11 @@ class BaseVar(ABC):
             theta: float - The value at risk level (e.g. 0.01 for 99% VaR)
             horizon: int - The forecast horizon.
         """
+        if not 0 <= theta <= 1:
+            raise ValueError("theta must be between 0 and 1")
+        if horizon <= 0:
+            raise ValueError("horizon must be greater than 0")
+
         self.theta = theta
         self.horizon = horizon
         self._var: float | None = None

@@ -14,10 +14,7 @@ dependencies = [
     "arch>=7.2.0",
     "numpy>=2.2.5",
     "scipy>=1.15.3",
-    "scipy-stubs>=1.15.3.0",
-    "numba>=0.61.2",
-    "ipykernel>=6.29.5",
-    "matplotlib>=3.10.3",
+    "scipy-stubs>=1.15.3.0"
 ]
 
 [project.optional-dependencies]
