@@ -2,6 +2,10 @@
 
 A Python library for computing Value at Risk (VaR) and Conditional Value at Risk (CVaR) using various statistical distributions and GARCH models.
 
+## Latest Release
+
+Check out our [latest release notes](docs/RELEASE.md) for details about version 2.0.0, including major improvements to the backtesting framework, type safety, and performance optimizations.
+
 ## Recent Refactoring
 
 The codebase has undergone a major refactoring to improve code organization, maintainability, and consistency. Here are the key changes:
