@@ -2,32 +2,17 @@
 
 A Python library for computing Value at Risk (VaR) and Conditional Value at Risk (CVaR) using various statistical distributions and GARCH models.
 
-## Latest Release
+## Download
 
-Check out our [latest release notes](docs/RELEASE.md) for details about version 2.0.0, including major improvements to the backtesting framework, type safety, and performance optimizations.
+```bash
+pip install varpy
+```
 
 ## Recent Refactoring
 
 The codebase has undergone a major refactoring to improve code organization, maintainability, and consistency. Here are the key changes:
 
-### 1. Class-Based Architecture
-
-All VaR models now follow a consistent class-based architecture inheriting from `BaseVar`:
-
-```python
-class BaseVar:
-    def __init__(self, theta: float, horizon: int):
-        self.theta = theta
-        self.horizon = horizon
-        self._var = None
-        self._cvar = None
-
-    def run(self, ret: NDArray[np.float64]) -> None:
-        """Compute VaR and CVaR. To be implemented by subclasses."""
-        raise NotImplementedError
-```
-
-### 2. Standardized Model Structure
+### 1. Standardized Model Structure
 
 Each VaR model (Normal, Student's t, EVT) follows the same pattern:
 
@@ -55,17 +40,6 @@ class SomeVar(BaseVar):
 - Added comprehensive type hints using `numpy.typing`
 - Consistent use of `NDArray[np.float64]` for numpy arrays
 - Proper return type annotations for all methods
-
-### 4. Modular Design
-
-Each model is broken down into logical private methods:
-
-- `_get_garch_forecasts`: GARCH model fitting and forecasting
-- `_get_excess_innovations`: Innovation processing
-- `_fit_distribution`: Distribution fitting
-- `_compute_unconditional_var`: Unconditional VaR calculation
-- `_compute_var`: Final VaR computation
-- `_compute_cvar`: Final CVaR computation
 
 ### 5. Enhanced Documentation
 
@@ -113,6 +87,8 @@ model.run(returns)
 var = model.var
 cvar = model.cvar
 ```
+
+More exemples [here](exemples.ipynb)
 
 ## Dependencies
 
