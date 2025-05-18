@@ -1,242 +1,350 @@
-from typing import Tuple
+from typing import Optional, Tuple, cast
 
-import numba as nb
+import numba as nb  # type: ignore
 import numpy as np
+import scipy
 from numba import prange
+from numpy.typing import NDArray
 
 BOOTSTRAP_UPPER_BOUND = 1.962
 BOOTSTRAP_LOWER_BOUND = -1.962
 
 
-@nb.njit()
-def count_transitions(matrix: np.ndarray) -> Tuple[int, int, int, int]:
-    """
-    Count the transitions between violations and non-violations in the matrix.
+class BacktestResults:
+    """Class to store and compute backtesting results."""
 
-    Args:
-        matrix: Binary array where 0 represents a violation and 1 represents no violation
+    def __init__(
+        self,
+        ret: NDArray[np.float64],
+        var: NDArray[np.float64],
+        cvar: NDArray[np.float64],
+        theta: float,
+    ):
+        """
+        Initialize backtesting results.
 
-    Returns:
-        Tuple of (m_00, m_01, m_10, m_11) where:
-        - m_00: transitions from no violation to no violation
-        - m_01: transitions from no violation to violation
-        - m_10: transitions from violation to no violation
-        - m_11: transitions from violation to violation
-    """
-    m_00 = m_01 = m_10 = m_11 = 0
-    for i in range(matrix.size - 1):
-        if matrix[i] == 0 and matrix[i + 1] == 0:
-            m_00 += 1
-        elif matrix[i] == 0 and matrix[i + 1] != 0:
-            m_01 += 1
-        elif matrix[i] != 0 and matrix[i + 1] == 0:
-            m_10 += 1
-        elif matrix[i] != 0 and matrix[i + 1] != 0:
-            m_11 += 1
-    return m_00, m_01, m_10, m_11
+        Args:
+            ret: Array of returns
+            var: Value at Risk
+            cvar: Conditional Value at Risk
+            theta: Expected probability of violation
+        """
+        self.ret = ret
+        self.var = var
+        self.cvar = cvar
+        self.theta = theta
 
+        # Initialize attributes with proper types
+        self.var_violations: Optional[int] = None
+        self.cvar_violations: Optional[int] = None
+        self.var_violation_mtx: Optional[NDArray[np.int_]] = None
+        self.cvar_violation_mtx: Optional[NDArray[np.int_]] = None
+        self.christoffersen: Optional[float] = None
+        self.binomial: Optional[float] = None
+        self.kupiec: Optional[float] = None
+        self.tuff: Optional[float] = None
+        self.hass: Optional[float] = None
+        self.q_ratio: Optional[float] = None
+        self.q_ratio_bootstrap: Optional[float] = None
 
-def compute_christoffersen_test(
-    matrix: np.ndarray, expected_prob: float, num_violations: int
-) -> float:
-    """
-    Compute the Christoffersen test statistic combining independence and coverage tests.
+    def run(self) -> None:
+        """Run all backtesting computations."""
+        # Compute violations
+        self.var_violations = self._count_var_violations()
+        self.cvar_violations = self._count_cvar_violations()
+        self.var_violation_mtx = self._create_var_violation_matrix()
+        self.cvar_violation_mtx = self._create_cvar_violation_matrix()
 
-    Args:
-        matrix: Binary array of violations
-        expected_prob: Expected probability of violation
-        num_violations: Number of violations observed
+        # Compute test statistics
+        self.christoffersen = self._compute_christoffersen_test()
+        self.binomial = self._compute_binomial_test()
+        self.kupiec = self._compute_coverage_statistic()
+        self.tuff = self._compute_tuff_test()
+        self.hass = self._compute_hass_test()
+        self.q_ratio = self._compute_quantile_ratio()
+        self.q_ratio_bootstrap = self._compute_bootstrap_test()
 
-    Returns:
-        Combined test statistic
-    """
-    m_00, m_01, m_10, m_11 = count_transitions(matrix)
-    independence_stat = compute_independence_statistic(m_00, m_01, m_10, m_11)
-    coverage_stat = compute_coverage_statistic(
-        num_violations, expected_prob, matrix.size
-    )
-    return independence_stat + coverage_stat
+    def _create_var_violation_matrix(self) -> NDArray[np.int_]:
+        """Create binary matrix of violations.
 
+        Returns:
+            Binary array where 1 indicates a VaR violation (return < -VaR)
+        """
+        return np.where(self.ret < self.var, 1, 0)
 
-def compute_independence_statistic(m_00: int, m_01: int, m_10: int, m_11: int) -> float:
-    """
-    Compute the independence test statistic (CCI).
+    def _create_cvar_violation_matrix(self) -> NDArray[np.int_]:
+        """Create binary matrix of violations.
 
-    Args:
-        m_00: transitions from no violation to no violation
-        m_01: transitions from no violation to violation
-        m_10: transitions from violation to no violation
-        m_11: transitions from violation to violation
+        Returns:
+            Binary array where 1 indicates a CVaR violation (return < -CVaR)
+        """
+        return np.where(self.ret < self.cvar, 1, 0)
 
-    Returns:
-        Independence test statistic
-    """
-    total = m_00 + m_01 + m_10 + m_11
-    pi = (m_01 + m_11) / total
-    pi1 = m_11 / (m_10 + m_11) if (m_10 + m_11) > 0 else 0
-    pi0 = m_01 / (m_00 + m_01) if (m_00 + m_01) > 0 else 0
+    def _count_var_violations(self) -> int:
+        """Count number of violations."""
+        return np.sum(self._create_var_violation_matrix())  # type: ignore
 
-    term_a = 2 * (m_00 + m_01) * np.log(1 - pi) - 2 * (m_10 + m_11) * np.log(pi)
-    term_b = (
-        2 * m_00 * np.log(1 - pi0)
-        + 2 * m_01 * np.log(pi0)
-        + 2 * m_10 * np.log(1 - pi1)
-        + 2 * m_11 * np.log(pi1)
-    )
-    return -term_a + term_b
+    def _count_cvar_violations(self) -> int:
+        """Count number of violations."""
+        return np.sum(self._create_cvar_violation_matrix())  # type: ignore
 
+    def _count_transitions(self, matrix: NDArray[np.int_]) -> Tuple[int, int, int, int]:
+        """
+        Count the transitions between violations and non-violations in the matrix.
 
-def compute_coverage_statistic(
-    num_violations: int, expected_prob: float, total_points: int
-) -> float:
-    """
-    Compute the coverage test statistic (POF - Proportion of Failures).
+        Args:
+            matrix: Binary array where 0 represents a violation and 1 represents no violation
 
-    Args:
-        num_violations: Number of violations observed
-        expected_prob: Expected probability of violation
-        total_points: Total number of observations
+        Returns:
+            Tuple of (m_00, m_01, m_10, m_11) where:
+            - m_00: transitions from no violation to no violation
+            - m_01: transitions from no violation to violation
+            - m_10: transitions from violation to no violation
+            - m_11: transitions from violation to violation
+        """
+        m_00 = m_01 = m_10 = m_11 = 0
+        for i in range(matrix.size - 1):
+            if matrix[i] == 0 and matrix[i + 1] == 0:
+                m_00 += 1
+            elif matrix[i] == 0 and matrix[i + 1] != 0:
+                m_01 += 1
+            elif matrix[i] != 0 and matrix[i + 1] == 0:
+                m_10 += 1
+            elif matrix[i] != 0 and matrix[i + 1] != 0:
+                m_11 += 1
+        return m_00, m_01, m_10, m_11
 
-    Returns:
-        Coverage test statistic
-    """
-    term_a = 2 * (total_points - num_violations) * np.log(
-        1 - expected_prob
-    ) + 2 * num_violations * np.log(expected_prob)
-    term_b = 2 * (total_points - num_violations) * np.log(
-        1 - (num_violations / total_points)
-    ) + 2 * num_violations * np.log(num_violations / total_points)
-    return -term_a + term_b
+    def _compute_independence_statistic(
+        self, m_00: int, m_01: int, m_10: int, m_11: int
+    ) -> float:
+        """
+        Compute the independence test statistic (CCI) using likelihood ratio.
 
+        The test statistic is calculated as:
+        LR_CCI = -2 * log(((1-π)^(n00+n10) * π^(n01+n11)) /
+                          ((1-π0)^n00 * π0^n01 * (1-π1)^n10 * π1^n11))
 
-def compute_tuff_test(matrix: np.ndarray, expected_prob: float) -> float:
-    """
-    Compute the TUFF (Time Until First Failure) test statistic.
+        where:
+        - π is the unconditional probability of violation
+        - π0 is the probability of violation given no violation in previous period
+        - π1 is the probability of violation given violation in previous period
+        - n00, n01, n10, n11 are the transition counts
 
-    Args:
-        matrix: Binary array of violations
-        num_violations: Number of violations observed
-        expected_prob: Expected probability of violation
+        Args:
+            m_00: transitions from no violation to no violation
+            m_01: transitions from no violation to violation
+            m_10: transitions from violation to no violation
+            m_11: transitions from violation to violation
 
-    Returns:
-        TUFF test statistic
-    """
-    first_failure_time = find_first_failure(matrix)
-    term_a = 2 * np.log(expected_prob) + (first_failure_time - 1) * np.log(
-        1 - expected_prob
-    )
-    term_b = 2 * (1 / first_failure_time) + (first_failure_time - 1) * np.log(
-        1 - 1 / first_failure_time
-    )
-    return -term_a + term_b
+        Returns:
+            Independence test statistic
+        """
+        total = m_00 + m_01 + m_10 + m_11
 
+        # Calculate probabilities
+        pi = (m_01 + m_11) / total  # Unconditional probability
+        pi0 = (
+            m_01 / (m_00 + m_01) if (m_00 + m_01) > 0 else 0
+        )  # Conditional probability given no violation
+        pi1 = (
+            m_11 / (m_10 + m_11) if (m_10 + m_11) > 0 else 0
+        )  # Conditional probability given violation
 
-def find_first_failure(matrix: np.ndarray) -> int:
-    """
-    Find the index of the first violation in the matrix.
+        # Calculate likelihood ratio
+        numerator = (1 - pi) ** (m_00 + m_10) * pi ** (m_01 + m_11)
+        denominator = (1 - pi0) ** m_00 * pi0**m_01 * (1 - pi1) ** m_10 * pi1**m_11
 
-    Args:
-        matrix: Binary array of violations
+        return -2 * np.log(numerator / denominator)
 
-    Returns:
-        Index of first violation
-    """
-    return np.where(matrix == 0)[0][0]
+    def _compute_coverage_statistic(self) -> float:
+        """
+        Compute the coverage test statistic (POF - Proportion of Failures) using likelihood ratio.
 
+        The test statistic is calculated as:
+        LR_POF = -2 * log(((1-p)^(N-x) * p^x) / ((1-x/N)^(N-x) * (x/N)^x))
 
-def compute_hass_test(
-    matrix: np.ndarray, num_violations: int, expected_prob: float, total_points: int
-) -> float:
-    """
-    Compute the Hass test statistic combining coverage and time-between-failures tests.
+        where:
+        - p is the expected probability of violation (theta)
+        - N is the total number of observations
+        - x is the number of violations
 
-    Args:
-        matrix: Binary array of violations
-        num_violations: Number of violations observed
-        expected_prob: Expected probability of violation
-        total_points: Total number of observations
+        Returns:
+            Coverage test statistic
+        """
+        assert self.var_violation_mtx is not None
+        assert self.var_violations is not None
 
-    Returns:
-        Hass test statistic
-    """
-    coverage_stat = compute_coverage_statistic(
-        num_violations, expected_prob, total_points
-    )
-    tbfi_stat = compute_time_between_failures(matrix, expected_prob)
-    return coverage_stat + tbfi_stat
+        n = self.var_violation_mtx.size  # Total number of observations
+        x = self.var_violations  # Number of violations
 
+        # Calculate likelihood ratio
+        numerator = (1 - self.theta) ** (n - x) * self.theta**x
+        denominator = (1 - x / n) ** (n - x) * (x / n) ** x
 
-@nb.njit()
-def compute_time_between_failures(matrix: np.ndarray, expected_prob: float) -> float:
-    """
-    Compute the Time Between Failures Independence (TBFI) test statistic.
+        return -2 * np.log(numerator / denominator)
 
-    Args:
-        matrix: Binary array of violations
-        expected_prob: Expected probability of violation
+    def _find_first_failure(self, matrix: NDArray[np.int_]) -> int:
+        """
+        Find the index of the first violation in the matrix.
 
-    Returns:
-        TBFI test statistic
-    """
-    term_a = term_b = 0
-    last_failure_time = 0
+        Args:
+            matrix: Binary array of violations
 
-    for i in range(matrix.size - 1):
-        if matrix[i] == 0:
-            time_since_last = i - last_failure_time
-            term_a += 2 * np.log(expected_prob) + (time_since_last - 1) * np.log(
-                1 - expected_prob
-            )
-            term_b += 2 * (1 / time_since_last) + (time_since_last - 1) * np.log(
-                1 - 1 / time_since_last
-            )
-            last_failure_time = i
+        Returns:
+            Index of first violation
+        """
+        return np.where(matrix == 1)[0][0] + 1
 
-    return -term_a + term_b
+    def _compute_tuff_test(self) -> float:
+        """
+        Compute the TUFF (Time Until First Failure) test statistic using likelihood ratio.
 
+        The test statistic is calculated as:
+        LR_TUFF = -2 * log(p * (1-p)^(n-1) / ((1/n) * (1-1/n)^(n-1)))
 
-def compute_bootstrap_test(
-    sample: np.ndarray, quantile: float, num_bootstrap: int
-) -> float:
-    """
-    Compute the bootstrap test p-value.
+        where:
+        - p is the expected probability of violation (theta)
+        - n is the time until first failure
 
-    Args:
-        sample: Array of observations
-        quantile: Expected quantile value
-        num_bootstrap: Number of bootstrap iterations
+        Returns:
+            TUFF test statistic
+        """
+        assert self.var_violation_mtx is not None
 
-    Returns:
-        Bootstrap test p-value
-    """
-    bootstrap_stats = run_bootstrap_loop(sample, quantile, num_bootstrap)
-    num_significant = np.sum(
-        (BOOTSTRAP_LOWER_BOUND <= bootstrap_stats)
-        & (bootstrap_stats <= BOOTSTRAP_UPPER_BOUND)
-    )
-    return num_significant / bootstrap_stats.size
+        n = self._find_first_failure(self.var_violation_mtx)  # Time until first failure
 
+        # Calculate likelihood ratio
+        numerator = self.theta * (1 - self.theta) ** (n - 1)
+        denominator = (1 / n) * (1 - 1 / n) ** (n - 1)
 
-@nb.njit(parallel=True, fastmath=True)
-def run_bootstrap_loop(
-    sample: np.ndarray, quantile: float, num_bootstrap: int
-) -> np.ndarray:
-    """
-    Run bootstrap iterations to compute test statistics.
+        return -2 * np.log(numerator / denominator)
 
-    Args:
-        sample: Array of observations
-        quantile: Expected quantile value
-        num_bootstrap: Number of bootstrap iterations
+    def _compute_time_between_failures(self, matrix: NDArray[np.int_]) -> float:
+        """
+        Compute the Time Between Failures Independence (TBFI) test statistic using likelihood ratio.
 
-    Returns:
-        Array of bootstrap test statistics
-    """
-    test_stats = np.zeros(num_bootstrap)
-    for i in prange(num_bootstrap):
-        bootstrap_sample = np.random.choice(sample, size=252, replace=True)
-        # Using median to adjust for skewness and kurtosis
-        test_stats[i] = (np.median(bootstrap_sample) - quantile) / (
-            np.std(bootstrap_sample) / np.sqrt(252)
+        The test statistic is calculated as:
+        LR_TBFI = -2 * sum(log(p * (1-p)^(n_i-1) / ((1/n_i) * (1-1/n_i)^(n_i-1))))
+
+        where:
+        - p is the expected probability of violation (theta)
+        - n_i is the time between failures
+        - The sum is over all failure intervals
+
+        Args:
+            matrix: Binary array of violations (1 indicates violation)
+
+        Returns:
+            TBFI test statistic
+        """
+        term = 0
+        last_failure_time = 0
+
+        for i in range(1, matrix.size + 1):
+            if matrix[i - 1] == 1:  # Found a violation
+                if last_failure_time > 0:  # Not the first violation
+                    n_i = i - last_failure_time  # Time between failures
+                    # Calculate likelihood ratio term
+                    numerator = self.theta * (1 - self.theta) ** (n_i - 1)
+                    denominator = (1 / n_i) * (1 - 1 / n_i) ** (n_i - 1)
+                    term += np.log(numerator / denominator)
+                last_failure_time = i
+        return -2 * term
+
+    def _compute_hass_test(self) -> float:
+        """
+        Compute the Hass test statistic combining coverage and time-between-failures tests.
+
+        Returns:
+            Hass test statistic
+        """
+        assert self.var_violation_mtx is not None
+
+        coverage_stat = self._compute_coverage_statistic()
+        tbfi_stat = self._compute_time_between_failures(self.var_violation_mtx)
+        return coverage_stat + tbfi_stat
+
+    def _compute_christoffersen_test(self) -> float:
+        """
+        Compute the Christoffersen test statistic combining independence and coverage tests.
+
+        Returns:
+            Combined test statistic
+        """
+        assert self.var_violation_mtx is not None
+
+        m_00, m_01, m_10, m_11 = self._count_transitions(self.var_violation_mtx)
+        independence_stat = self._compute_independence_statistic(m_00, m_01, m_10, m_11)
+        coverage_stat = self._compute_coverage_statistic()
+        return independence_stat + coverage_stat
+
+    def _compute_binomial_test(self) -> float:
+        """
+        Compute the binomial test statistic (Z-statistic).
+
+        Returns:
+            Z-statistic for the binomial test
+        """
+        assert self.var_violation_mtx is not None
+        assert self.var_violations is not None
+
+        test = scipy.stats.binomtest(
+            self.var_violations, self.var_violation_mtx.size, self.theta
         )
-    return test_stats
+        return test.pvalue
+
+    def _run_bootstrap_loop(
+        self, sample: NDArray[np.float64], quantile: float, num_bootstrap: int
+    ) -> NDArray[np.float64]:
+        """
+        Run bootstrap iterations to compute test statistics.
+
+        Args:
+            sample: Array of observations
+            quantile: Expected quantile value
+            num_bootstrap: Number of bootstrap iterations
+
+        Returns:
+            Array of bootstrap test statistics
+        """
+        test_stats = np.zeros(num_bootstrap)
+        bootstrap_size = max(len(sample) * 5, 256)  # Use same size as original sample
+
+        for i in prange(num_bootstrap):
+            bootstrap_sample = np.random.choice(
+                sample, size=bootstrap_size, replace=True
+            )
+            # Calculate bootstrap mean and standard error
+            bootstrap_mean = np.mean(bootstrap_sample)
+            bootstrap_std = np.std(bootstrap_sample)
+            # Add small constant to avoid division by very small numbers
+            bootstrap_sem = bootstrap_std / np.sqrt(bootstrap_size)
+            test_stats[i] = (bootstrap_mean - quantile) / bootstrap_sem
+        return test_stats
+
+    def _compute_bootstrap_test(self) -> float:
+        """
+        Compute the bootstrap test p-value.
+
+        Returns:
+            Bootstrap test p-value
+        """
+        assert self.var_violation_mtx is not None
+
+        bootstrap_stats = self._run_bootstrap_loop(
+            self.var_violation_mtx.astype(np.float64), self.theta, 100000
+        )
+        num_significant = np.sum(
+            (BOOTSTRAP_LOWER_BOUND <= bootstrap_stats)
+            & (bootstrap_stats <= BOOTSTRAP_UPPER_BOUND)
+        )
+        return num_significant / bootstrap_stats.size
+
+    def _compute_quantile_ratio(self) -> float:
+        """
+        Calculate the quantile ratio of the VaR and CVaR.
+
+        Returns:
+            The mean quantile ratio of the VaR and CVaR.
+        """
+        return float(np.mean(self.cvar / self.var))
