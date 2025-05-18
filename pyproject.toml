@@ -1,12 +1,16 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "numpy>=2.2.5"]
+requires = ["setuptools>=61.0", "wheel", "numpy>=2.2.5", "scipy>=1.15.3", "arch>=7.2.0", "pandas>=2.2.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "varpy"
-version = "2.0.0"
+version = "2.0.1"
 description = "Value at Risk tools"
 readme = "README.md"
+keywords = ["value at risk", "risk management", "financial risk", "risk metrics"]
+authors = [
+    {name = "Elyes Mahjoubi", email = "elyesmahjoubi@gmail.com"}
+]
 requires-python = ">=3.10"
 dependencies = [
     "pandas-stubs>=2.2.3.250308",
@@ -16,6 +20,13 @@ dependencies = [
     "scipy>=1.15.3",
     "scipy-stubs>=1.15.3.0"
 ]
+classifiers = [
+    "Operating System :: OS Independent",
+    "License :: OSI Approved :: MIT License"
+]
+
+[project.urls]
+repository = "https://github.com/EM51641/varpy"
 
 [project.optional-dependencies]
 dev = [
@@ -27,13 +38,10 @@ dev = [
     "flake8>=5.0.0"
 ]
 
-[tool.setuptools]
-package-dir = {"varpy" = "varpy"}
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["varpy*"]
-exclude = ["tests*", "docs*", "examples*"]
+exclude = ["tests*", "docs*"]
 
 [tool.black]
 line-length = 88
