@@ -1,13 +1,13 @@
-from typing import Optional, Tuple, cast
+from typing import Optional
 
-import numba as nb  # type: ignore
 import numpy as np
 import scipy
-from numba import prange
 from numpy.typing import NDArray
 
 BOOTSTRAP_UPPER_BOUND = 1.962
 BOOTSTRAP_LOWER_BOUND = -1.962
+BOOTSTRAP_ITERATIONS = 1000
+MIN_BOOTSTRAP_SIZE = 256
 
 
 class BacktestResults:
@@ -88,7 +88,7 @@ class BacktestResults:
         """Count number of violations."""
         return np.sum(self._create_cvar_violation_matrix())  # type: ignore
 
-    def _count_transitions(self, matrix: NDArray[np.int_]) -> Tuple[int, int, int, int]:
+    def _count_transitions(self, matrix: NDArray[np.int_]) -> tuple[int, int, int, int]:
         """
         Count the transitions between violations and non-violations in the matrix.
 
@@ -96,7 +96,7 @@ class BacktestResults:
             matrix: Binary array where 0 represents a violation and 1 represents no violation
 
         Returns:
-            Tuple of (m_00, m_01, m_10, m_11) where:
+            tuple of (m_00, m_01, m_10, m_11) where:
             - m_00: transitions from no violation to no violation
             - m_01: transitions from no violation to violation
             - m_10: transitions from violation to no violation
@@ -308,9 +308,9 @@ class BacktestResults:
             Array of bootstrap test statistics
         """
         test_stats = np.zeros(num_bootstrap)
-        bootstrap_size = max(len(sample) * 5, 256)  # Use same size as original sample
+        bootstrap_size = max(len(sample) * 5, MIN_BOOTSTRAP_SIZE)
 
-        for i in prange(num_bootstrap):
+        for i in range(num_bootstrap):
             bootstrap_sample = np.random.choice(
                 sample, size=bootstrap_size, replace=True
             )
@@ -332,7 +332,7 @@ class BacktestResults:
         assert self.var_violation_mtx is not None
 
         bootstrap_stats = self._run_bootstrap_loop(
-            self.var_violation_mtx.astype(np.float64), self.theta, 100000
+            self.var_violation_mtx.astype(np.float64), self.theta, BOOTSTRAP_ITERATIONS
         )
         num_significant = np.sum(
             (BOOTSTRAP_LOWER_BOUND <= bootstrap_stats)

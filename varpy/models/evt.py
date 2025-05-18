@@ -2,14 +2,18 @@ import numpy as np
 import scipy.stats
 from numpy.typing import NDArray
 
-from varpy.models.base import BaseVar
+from varpy.models.base import DEFAULT_RETENTION_THRESHOLD, BaseVar
 from varpy.regressions.arch import garch_forecast, garch_regression
-from varpy.regressions.utils import InnovationProcessor
 
 
 class EVT(BaseVar):
-    def __init__(self, theta: float, horizon: int):
-        super().__init__(theta, horizon)
+    def __init__(
+        self,
+        theta: float,
+        horizon: int,
+        retention_threshold: float = DEFAULT_RETENTION_THRESHOLD,
+    ):
+        super().__init__(theta, horizon, retention_threshold)
 
     def run(self, ret: NDArray[np.float64]) -> None:
         """
@@ -67,7 +71,7 @@ class EVT(BaseVar):
         Returns:
             Tuple of (excess_innovations, last_innovation)
         """
-        ip = InnovationProcessor(ret, mean, cond_vol, 0.10)
+        ip = self._get_innovation_processor(ret, mean, cond_vol)
         return ip.extract_excess_innovation_evt()
 
     def _fit_gpd(self, excess_innovations: NDArray[np.float64]) -> tuple[float, ...]:

@@ -1,6 +1,10 @@
 import numpy as np
+from numpy.typing import NDArray
 
 from varpy.models.base import BaseVar
+
+DEFAULT_STEP = 1
+DEFAULT_ROLLING_WINDOW = 500
 
 
 class Backtest:
@@ -21,10 +25,10 @@ class Backtest:
 
     def __init__(
         self,
-        ret: np.typing.NDArray[np.float64],
-        step: int,
+        ret: NDArray[np.float64],
         model: BaseVar,
-        rolling_window: int = 500,
+        step: int = DEFAULT_STEP,
+        rolling_window: int = DEFAULT_ROLLING_WINDOW,
     ):
         """
         Initialize the Backtest class
@@ -34,8 +38,8 @@ class Backtest:
         self.model = model
         self.rolling_window = rolling_window
 
-        self.var: np.ndarray | None = None
-        self.cvar: np.ndarray | None = None
+        self.var: NDArray[np.float64] | None = None
+        self.cvar: NDArray[np.float64] | None = None
 
     def simulation(self) -> None:
         """

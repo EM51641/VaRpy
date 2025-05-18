@@ -3,9 +3,18 @@ from abc import ABC, abstractmethod
 import numpy as np
 from numpy.typing import NDArray
 
+from varpy.regressions.utils import InnovationProcessor
+
+DEFAULT_RETENTION_THRESHOLD = 0.10
+
 
 class BaseVar(ABC):
-    def __init__(self, theta: float, horizon: int):
+    def __init__(
+        self,
+        theta: float,
+        horizon: int,
+        retention_threshold: float = DEFAULT_RETENTION_THRESHOLD,
+    ):
         """
         Initialize the BaseVar class.
 
@@ -21,6 +30,7 @@ class BaseVar(ABC):
 
         self.theta = theta
         self.horizon = horizon
+        self.retention_threshold = retention_threshold
         self._var: float | None = None
         self._cvar: float | None = None
 
@@ -35,3 +45,18 @@ class BaseVar(ABC):
     @abstractmethod
     def run(self, ret: NDArray[np.float64]) -> None:
         pass
+
+    def _get_innovation_processor(
+        self, ret: NDArray[np.float64], mean: float, cond_vol: NDArray[np.float64]
+    ) -> InnovationProcessor:
+        """
+        Get the innovation processor.
+
+        Args:
+            mean: Forecasted mean
+            cond_vol: Conditional volatility
+
+        Returns:
+            InnovationProcessor
+        """
+        return InnovationProcessor(ret, mean, cond_vol, self.retention_threshold)
