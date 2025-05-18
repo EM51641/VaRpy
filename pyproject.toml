@@ -9,7 +9,7 @@ description = "Value at Risk tools"
 readme = "README.md"
 repository = "https://github.com/EM51641/varpy"
 keywords = ["value at risk", "risk management", "financial risk", "risk metrics"]
-authors = [{ name: "Elyes Mahjoubi", email: "elyesmahjoubi@gmail.com" }]
+authors = ["Elyes Mahjoubi <elyesmahjoubi@gmail.com>"]
 requires-python = ">=3.10"
 dependencies = [
     "pandas-stubs>=2.2.3.250308",
