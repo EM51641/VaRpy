@@ -13,7 +13,7 @@ jobs:
         python-version: ["3.10" , "3.11", "3.12", "3.13"]
 
     steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
 
         - name: Setup the environment
           uses: ./.github/actions/build_env
@@ -27,7 +27,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
 
         - name: Setup the environment
           uses: ./.github/actions/build_env
@@ -47,7 +47,7 @@ jobs:
   static-analysis:
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/checkout@v4
+        - uses: actions/checkout@v5
 
         - name: Setup the environment
           uses: ./.github/actions/build_env
